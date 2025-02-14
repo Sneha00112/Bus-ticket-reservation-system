@@ -1,0 +1,984 @@
+RegistrationLoginApp 
+import javax.swing.*;
+
+import java.awt.*;
+
+import java.sql.*;
+
+import java.util.ArrayList;
+
+import java.util.List;
+
+import java.util.Objects;
+
+class RegistrationLoginApp {
+
+    private JPanel mainPanel;
+
+    private ImageIcon logoIcon;
+
+    private JButton registerButton;
+
+    private JButton loginButton;
+
+    public RegistrationLoginApp(CardLayout cardLayout, JPanel cardPanel) {
+
+        logoIcon = new ImageIcon(Objects.requireNonNull(getClass().getResource("/login/loginicon.jpeg")));
+
+        if (logoIcon.getImageLoadStatus() == MediaTracker.ERRORED) {
+
+            System.out.println("Image not loaded. Check the file path.");
+
+        }
+
+        mainPanel = createMainPanel(cardLayout, cardPanel);
+
+        cardPanel.add(mainPanel, "RegistrationLoginApp");
+
+    }
+
+    private JPanel createMainPanel(CardLayout cardLayout, JPanel cardPanel) {
+
+        JPanel panel = new JPanel(new BorderLayout());
+
+        panel.setBackground(new Color(200, 220, 240));
+
+        JLabel logoLabel = new JLabel(logoIcon);
+
+        logoLabel.setHorizontalAlignment(SwingConstants.CENTER);
+
+        panel.add(logoLabel, BorderLayout.NORTH);
+
+        JPanel formPanel = new JPanel();
+
+        formPanel.setLayout(new BoxLayout(formPanel, BoxLayout.Y_AXIS));
+
+        formPanel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
+
+        JPanel inputPanel = new JPanel(new GridLayout(4, 2, 10, 10));
+
+        JTextField usernameField = new JTextField();
+
+        JPasswordField passwordField = new JPasswordField();
+
+        inputPanel.add(new JLabel("Username:", SwingConstants.RIGHT));
+
+        inputPanel.add(usernameField);
+
+        inputPanel.add(new JLabel("Password:", SwingConstants.RIGHT));
+
+        inputPanel.add(passwordField);
+
+        formPanel.add(inputPanel);
+
+        JPanel buttonPanel = new JPanel();
+
+        buttonPanel.setLayout(new FlowLayout());
+
+        registerButton = new JButton("Register if not registered");
+
+        loginButton = new JButton("Login");
+
+        buttonPanel.add(registerButton);
+
+        buttonPanel.add(loginButton);
+
+        formPanel.add(buttonPanel);
+
+        panel.add(formPanel, BorderLayout.CENTER);
+
+        registerButton.addActionListener(e -> {
+
+            String username = usernameField.getText().trim();
+
+            String password = new String(passwordField.getPassword()).trim();
+
+            if (username.isEmpty() || password.isEmpty()) {
+
+                JOptionPane.showMessageDialog(panel, "Username and password cannot be empty!", "Input Error", JOptionPane.ERROR_MESSAGE);
+
+            } else {
+
+                registerUser(username, password);
+
+                JOptionPane.showMessageDialog(panel, "Registration successful! Please log in.");
+
+            }
+
+        });
+
+        loginButton.addActionListener(e -> {
+
+            String username = usernameField.getText().trim();
+
+            String password = new String(passwordField.getPassword()).trim();
+
+            if (username.isEmpty() || password.isEmpty()) {
+
+                JOptionPane.showMessageDialog(panel, "Username and password cannot be empty!", "Input Error", JOptionPane.ERROR_MESSAGE);
+
+            } else {
+
+                boolean loggedIn = loginUser(username, password);
+
+                if (loggedIn) {
+
+                    JOptionPane.showMessageDialog(null, "Login successful! Welcome, " + username + "!");
+
+                    cardLayout.show(cardPanel, "TravelBooking");
+
+                } else {
+
+                    JOptionPane.showMessageDialog(panel, "Login failed! Check your username and password.", "Login Error", JOptionPane.ERROR_MESSAGE);
+
+                }
+
+            }
+
+        });
+
+        return panel;
+
+    }
+
+    private void registerUser(String username, String password) {
+
+        try (Connection conn = DBConnection.getConnection()) {
+
+            String sql = "INSERT INTO users (username, password) VALUES (?, ?)";
+
+            try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+
+                stmt.setString(1, username);
+
+                stmt.setString(2, password);
+
+                int rows = stmt.executeUpdate();
+
+                if (rows > 0) {
+
+                    JOptionPane.showMessageDialog(null, "User registered successfully!");
+
+                }
+
+            }
+
+        } catch (SQLException e) {
+
+            JOptionPane.showMessageDialog(null, "Registration failed: " + e.getMessage(), "Registration Error", JOptionPane.ERROR_MESSAGE);
+
+        }
+
+    }
+
+    private boolean loginUser(String username, String password) {
+
+        try (Connection conn = DBConnection.getConnection()) {
+
+            String sql = "SELECT * FROM users WHERE username = ? AND password = ?";
+
+            try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+
+                stmt.setString(1, username);
+
+                stmt.setString(2, password);
+
+                ResultSet rs = stmt.executeQuery();
+
+                return rs.next();
+
+            }
+
+        } catch (SQLException e) {
+
+            JOptionPane.showMessageDialog(null, "Login failed: " + e.getMessage(), "Login Error", JOptionPane.ERROR_MESSAGE);
+
+            return false;
+
+        }
+
+    }
+
+    public JPanel getPanel() {
+
+        return mainPanel;
+
+    }
+
+}
+
+TravelBooking
+import javax.swing.*;
+
+import java.awt.*;
+
+import java.sql.*;
+
+import java.util.ArrayList;
+
+import java.util.List;
+
+class TravelBooking {
+
+    private JPanel panel;
+
+    private JComboBox routeComboBox, timeComboBox, typeComboBox;
+
+    private JTextField dateField, passengerCountField, contactField;
+
+    private JButton bookButton;
+
+    private ImageIcon backgroundImage;
+
+    public TravelBooking(CardLayout cardLayout, JPanel cardPanel) {
+
+// Set the background image
+
+        backgroundImage = new ImageIcon(getClass().getResource("/bus/BUS.jpg")); // Ensure image is in the correct folder
+
+        panel = new JPanel() {
+
+            @Override
+
+            protected void paintComponent(Graphics g) {
+
+                super.paintComponent(g);
+
+                g.drawImage(backgroundImage.getImage(), 0, 0, getWidth(), getHeight(), null);
+
+            }
+
+        };
+
+        panel.setLayout(new GridLayout(10, 2, 10, 10));
+
+        panel.add(new JLabel("Travel Date (YYYY-MM-DD):"));
+
+        dateField = new JTextField();
+
+        panel.add(dateField);
+
+        panel.add(new JLabel("Route:"));
+
+        routeComboBox = new JComboBox<>(new String[]{
+
+                "Chennai to Trichy", "Chennai to Bangalore",
+
+                "Chennai to Kerala", "Chennai to Hyderabad"
+
+        });
+
+        panel.add(routeComboBox);
+
+        panel.add(new JLabel("Time:"));
+
+        timeComboBox = new JComboBox<>(new String[]{"08:00:00", "12:00:00", "16:00:00", "20:00:00"});
+
+        panel.add(timeComboBox);
+
+        panel.add(new JLabel("Bus Type:"));
+
+        typeComboBox = new JComboBox<>(new String[]{"AC", "Non-AC", "Semi Sleeper", "Sleeper"});
+
+        panel.add(typeComboBox);
+
+        panel.add(new JLabel("Number of Passengers:"));
+
+        passengerCountField = new JTextField("1");
+
+        panel.add(passengerCountField);
+
+        panel.add(new JLabel("Contact:"));
+
+        contactField = new JTextField();
+
+        panel.add(contactField);
+
+        bookButton = new JButton("Enter Name");
+
+        panel.add(bookButton);
+
+        bookButton.addActionListener(e -> handleBooking(cardLayout, cardPanel));
+
+    }
+
+    private void handleBooking(CardLayout cardLayout, JPanel cardPanel) {
+
+        String route = (String) routeComboBox.getSelectedItem();
+
+        String travelDate = dateField.getText().trim();
+
+        String travelTime = (String) timeComboBox.getSelectedItem();
+
+        String contact = contactField.getText().trim();
+
+        int passengerCount;
+
+        try {
+
+            passengerCount = Integer.parseInt(passengerCountField.getText());
+
+            if (passengerCount <= 0) throw new NumberFormatException();
+
+        } catch (NumberFormatException e) {
+
+            JOptionPane.showMessageDialog(panel, "Please enter a valid number of passengers.", "Input Error", JOptionPane.ERROR_MESSAGE);
+
+            return;
+
+        }
+
+        List passengerNames = new ArrayList<>();
+
+        for (int i = 0; i < passengerCount; i++) {
+
+            String name = JOptionPane.showInputDialog(panel, "Enter name for Passenger " + (i + 1) + ":");
+
+            if (name == null || name.trim().isEmpty()) {
+
+                JOptionPane.showMessageDialog(panel, "Please enter a valid name for Passenger " + (i + 1), "Input Error", JOptionPane.ERROR_MESSAGE);
+
+                return;
+
+            }
+
+            passengerNames.add(name.trim());
+
+        }
+
+        MultiSeatBookingSwing multiSeatBookingSwing = new MultiSeatBookingSwing(cardLayout, cardPanel, route, travelDate, travelTime, contact, passengerNames);
+
+        cardPanel.add(multiSeatBookingSwing.getPanel(), "MultiSeatBooking");
+
+        cardLayout.show(cardPanel, "MultiSeatBooking");
+
+    }
+
+    public JPanel getPanel() {
+
+        return panel;
+
+    }
+
+}
+
+MultiSeatBookingSwing
+
+import javax.swing.*;
+import java.awt.*;
+import java.sql.*;
+import java.util.ArrayList;
+import java.util.List;
+
+class MultiSeatBookingSwing {
+    private int rows = 5;
+    private int columns = 5;
+    private JPanel mainPanel;
+    private JPanel seatPanel;
+    private JButton bookButton;
+    private CardLayout cardLayout;
+    private JPanel cardPanel;
+    private List<String> selectedSeats = new ArrayList<>();  // Specify String type
+    private String route;
+    private String travelDate;
+    private String travelTime;
+    private String contact;
+    private List<String> passengerNames;  // Specify String type
+
+    public MultiSeatBookingSwing(CardLayout cardLayout, JPanel cardPanel, String route, String travelDate, String travelTime, String contact, List<String> passengerNames) {
+        this.cardLayout = cardLayout;
+        this.cardPanel = cardPanel;
+        this.route = route;
+        this.travelDate = travelDate;
+        this.travelTime = travelTime;
+        this.contact = contact;
+        this.passengerNames = passengerNames;
+
+        mainPanel = new JPanel(new BorderLayout());
+        mainPanel.setBackground(Color.WHITE);
+
+        JLabel headerLabel = new JLabel("Select your Seat", JLabel.CENTER);
+        headerLabel.setFont(new Font("Arial", Font.BOLD, 18));
+        headerLabel.setForeground(Color.BLUE);
+        headerLabel.setOpaque(true);
+        headerLabel.setBackground(new Color(173, 216, 230));
+        headerLabel.setPreferredSize(new Dimension(0, 50));
+        mainPanel.add(headerLabel, BorderLayout.NORTH);
+
+        seatPanel = new JPanel(new GridLayout(rows, columns, 15, 15));
+        seatPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+        initializeSeatLayout(); // Initialize seat layout with booked seats
+
+        mainPanel.add(seatPanel, BorderLayout.CENTER);
+        createBottomPanel();
+    }
+
+    private void createBottomPanel() {
+        JPanel bottomPanel = new JPanel(new BorderLayout());
+        bottomPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+        bottomPanel.setBackground(Color.WHITE);
+
+        JPanel legendPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 15, 5));
+        legendPanel.setBackground(Color.WHITE);
+
+        JLabel availableLabel = new JLabel("Available", JLabel.CENTER);
+        availableLabel.setForeground(Color.BLACK);
+        availableLabel.setOpaque(true);
+        availableLabel.setBackground(Color.GREEN);
+
+        JLabel bookedLabel = new JLabel("Booked", JLabel.CENTER);
+        bookedLabel.setForeground(Color.WHITE);
+        bookedLabel.setOpaque(true);
+        bookedLabel.setBackground(Color.RED);
+
+        JLabel selectedLabel = new JLabel("Selected", JLabel.CENTER);
+        selectedLabel.setForeground(Color.BLACK);
+        selectedLabel.setOpaque(true);
+        selectedLabel.setBackground(Color.YELLOW);
+
+        legendPanel.add(availableLabel);
+        legendPanel.add(bookedLabel);
+        legendPanel.add(selectedLabel);
+
+        bookButton = new JButton("Done");
+        bookButton.setBackground(new Color(135, 206, 250));
+        bookButton.setFont(new Font("Arial", Font.BOLD, 14));
+        bookButton.setBorder(BorderFactory.createEmptyBorder(5, 10, 5, 10));
+        bookButton.addActionListener(e -> confirmBooking());
+
+        bottomPanel.add(legendPanel, BorderLayout.NORTH);
+        bottomPanel.add(bookButton, BorderLayout.SOUTH);
+        mainPanel.add(bottomPanel, BorderLayout.SOUTH);
+    }
+
+    private void initializeSeatLayout() {
+        int seatNumber = 1;
+        for (int i = 0; i < rows; i++) {
+            for (int j = 0; j < columns; j++) {
+                JButton seatButton = new JButton(String.valueOf(seatNumber++));
+                if (isSeatBooked(seatButton.getText())) {
+                    seatButton.setBackground(Color.RED);
+                    seatButton.setEnabled(false);  // Disable the button to prevent further selection
+                } else {
+                    seatButton.setBackground(Color.GREEN);
+                    seatButton.addActionListener(e -> toggleSeatSelection(seatButton));
+                }
+                seatPanel.add(seatButton);
+            }
+        }
+    }
+
+    private boolean isSeatBooked(String seatNumber) {
+        // Check in the database if the seat is already booked
+        try (Connection conn = DBConnection.getConnection()) {
+            String sql = "SELECT COUNT(*) FROM seat_bookings WHERE route = ? AND travel_date = ? AND time = ? AND seat_number = ?";
+            try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+                stmt.setString(1, route);
+                stmt.setString(2, travelDate);
+                stmt.setString(3, travelTime);
+                stmt.setInt(4, Integer.parseInt(seatNumber));
+                ResultSet rs = stmt.executeQuery();
+                if (rs.next()) {
+                    return rs.getInt(1) > 0; // If count is greater than 0, the seat is booked
+                }
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return false; // Seat is not booked
+    }
+
+    private void toggleSeatSelection(JButton seatButton) {
+        if (seatButton.getBackground().equals(Color.GREEN)) {
+            seatButton.setBackground(Color.YELLOW);
+            selectedSeats.add(seatButton.getText()); // Add seat to selected list
+        } else if (seatButton.getBackground().equals(Color.YELLOW)) {
+            seatButton.setBackground(Color.GREEN);
+            selectedSeats.remove(seatButton.getText()); // Remove seat from selected list
+        }
+    }
+
+    private void confirmBooking() {
+        // Store booked seats in the database
+        for (String seat : selectedSeats) {
+            storeBookedSeat(seat);
+        }
+        // Pass data to MealSelectionSwing
+        MealSelectionSwing mealSelection = new MealSelectionSwing(cardLayout, cardPanel, route, travelDate, travelTime, selectedSeats, getTotalPrice(), passengerNames, contact);
+        cardPanel.add(mealSelection.getPanel(), "MealSelection");
+        cardLayout.show(cardPanel, "MealSelection");
+    }
+
+    private double getTotalPrice() {
+        // Assuming a sample seat price of $100
+        return selectedSeats.size() * 100.0;
+    }
+
+    private void storeBookedSeat(String seatNumber) {
+        try (Connection conn = DBConnection.getConnection()) {
+            String sql = "INSERT INTO seat_bookings (route, travel_date, time, seat_number, passenger_names, contact) VALUES (?, ?, ?, ?, ?, ?)";
+            try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+                stmt.setString(1, route);
+                stmt.setString(2, travelDate);
+                stmt.setString(3, travelTime);
+                stmt.setInt(4, Integer.parseInt(seatNumber));
+                stmt.setString(5, String.join(", ", passengerNames)); // Join passenger names for storage
+                stmt.setString(6, contact);
+                stmt.executeUpdate();
+            }
+        } catch (SQLException e) {
+            e.printStackTrace(); // Handle the error gracefully
+        }
+    }
+
+    public JPanel getPanel() {
+        return mainPanel;
+    }
+}
+
+MealSelectionSwing 
+import javax.swing.*;
+import java.awt.*;
+import java.util.ArrayList;
+import java.util.List;
+
+class MealSelectionSwing extends JPanel {
+
+    private JCheckBox sambarCheckBox, curdRiceCheckBox, pongalCheckBox, idliCheckBox, dosaCheckBox;
+
+    private JButton confirmButton;
+
+    private String route;
+
+    private String travelDate;
+
+    private String travelTime;
+
+    private List selectedSeats;
+
+    private double seatPrice;
+
+    private List passengerNames;
+
+    private String contact;
+
+    public MealSelectionSwing(CardLayout cardLayout, JPanel cardPanel, String route, String travelDate, String travelTime, List selectedSeats, double seatPrice, List passengerNames, String contact) {
+
+        this.route = route;
+
+        this.travelDate = travelDate;
+
+        this.travelTime = travelTime;
+
+        this.selectedSeats = selectedSeats;
+
+        this.seatPrice = seatPrice;
+
+        this.passengerNames = passengerNames;
+
+        this.contact = contact;
+
+        setLayout(new BorderLayout());
+
+        JLabel instructionLabel = new JLabel("Please select your desired meals:", JLabel.CENTER);
+
+        instructionLabel.setFont(new Font("Arial", Font.BOLD, 16));
+
+        add(instructionLabel, BorderLayout.NORTH);
+
+        JPanel mainPanel = new JPanel(new GridLayout(3, 2, 10, 10));
+
+        mainPanel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
+
+// Meal checkboxes
+
+        sambarCheckBox = new JCheckBox("Sambar Rice");
+
+        curdRiceCheckBox = new JCheckBox("Curd Rice");
+
+        pongalCheckBox = new JCheckBox("Pongal");
+
+        idliCheckBox = new JCheckBox("Idli (Rice Cake)");
+
+        dosaCheckBox = new JCheckBox("Dosa (Rice Crepe)");
+
+// Add checkboxes to main panel
+
+        mainPanel.add(sambarCheckBox);
+
+        mainPanel.add(createImageLabel("C:/Users/vmohu/Bus reseveration system/res/sambar/sambar.jpg"));
+
+        mainPanel.add(curdRiceCheckBox);
+
+        mainPanel.add(createImageLabel("C:/Users/vmohu/Bus reseveration system/res/curdrice/curdrice.jpg"));
+
+        mainPanel.add(pongalCheckBox);
+
+        mainPanel.add(createImageLabel("C:/Users/vmohu/Bus reseveration system/res/pongal/pongal.jpg"));
+
+        mainPanel.add(idliCheckBox);
+
+        mainPanel.add(createImageLabel("C:/Users/vmohu/Bus reseveration system/res/idly/idly.jpg"));
+
+        mainPanel.add(dosaCheckBox);
+
+        mainPanel.add(createImageLabel("C:/Users/vmohu/Bus reseveration system/res/dosa/dosa.jpg"));
+
+        add(mainPanel, BorderLayout.CENTER);
+
+// Confirm button
+
+        confirmButton = new JButton("Confirm Selection");
+
+        confirmButton.addActionListener(e -> {
+
+            StringBuilder meals = new StringBuilder("Selected Meals: ");
+
+            List selectedMeals = new ArrayList<>();
+
+            if (sambarCheckBox.isSelected()) selectedMeals.add("Sambar Rice");
+
+            if (curdRiceCheckBox.isSelected()) selectedMeals.add("Curd Rice");
+
+            if (pongalCheckBox.isSelected()) selectedMeals.add("Pongal");
+
+            if (idliCheckBox.isSelected()) selectedMeals.add("Idli");
+
+            if (dosaCheckBox.isSelected()) selectedMeals.add("Dosa");
+
+            meals.append(String.join(", ", selectedMeals));
+
+            JOptionPane.showMessageDialog(this, meals.toString(), "Meals Confirmed", JOptionPane.INFORMATION_MESSAGE);
+
+            double totalMealPrice = selectedMeals.size() * 30.0; // Example price per meal
+
+            BookingSummarySwing bookingSummary = new BookingSummarySwing(route, travelDate, travelTime, contact, passengerNames, seatPrice, selectedSeats, selectedMeals, totalMealPrice);
+
+            cardPanel.add(bookingSummary.getPanel(), "BookingSummary");
+
+            cardLayout.show(cardPanel, "BookingSummary");
+
+        });
+
+        add(confirmButton, BorderLayout.SOUTH);
+
+    }
+
+    private JLabel createImageLabel(String imagePath) {
+
+        ImageIcon imageIcon = new ImageIcon(imagePath);
+
+        Image img = imageIcon.getImage(); // Get the image
+
+        Image resizedImg = img.getScaledInstance(150, 150, Image.SCALE_SMOOTH); // Resize image
+
+        ImageIcon resizedIcon = new ImageIcon(resizedImg); // Create a new ImageIcon from the resized image
+
+        return new JLabel(resizedIcon);
+
+    }
+
+    public JPanel getPanel() {
+
+        return this;
+
+    }
+
+}
+BookingSummarySwing 
+import javax.swing.*;
+import java.awt.*;
+import java.util.List;
+class BookingSummarySwing {
+
+    private JPanel summaryPanel;
+
+    public BookingSummarySwing(String route, String travelDate, String travelTime, String contact,
+                               List<String> passengerNames, double totalPrice, List<String> selectedSeats,
+                               List<String> meals, double totalMealPrice) {
+
+        // Load the background image
+        ImageIcon backgroundIcon = new ImageIcon("C:\\Users\\vmohu\\Bus reseveration system\\res\\summarybus\\summarybuses.jpg"); // Set path to the bus image here
+        JLabel backgroundLabel = new JLabel(backgroundIcon);
+
+        // Set layout to place components over the background
+        backgroundLabel.setLayout(new GridBagLayout());
+
+        summaryPanel = new JPanel() {
+            @Override
+            protected void paintComponent(Graphics g) {
+                super.paintComponent(g);
+                g.drawImage(backgroundIcon.getImage(), 0, 0, getWidth(), getHeight(), this);
+            }
+        };
+
+        summaryPanel.setOpaque(false); // Make the panel transparent to see the background image
+        summaryPanel.setLayout(new BoxLayout(summaryPanel, BoxLayout.Y_AXIS));
+        summaryPanel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
+
+        // Title label
+        JLabel summaryLabel = new JLabel("Booking Summary", JLabel.CENTER);
+        summaryLabel.setFont(new Font("Arial", Font.BOLD, 36)); // Bigger font size for title
+        summaryLabel.setForeground(Color.BLACK); // Set text color for better visibility
+        summaryPanel.add(summaryLabel);
+
+        // Details labels with larger font size
+        JLabel routeLabel = new JLabel("Route: " + route);
+        routeLabel.setFont(new Font("Arial", Font.PLAIN, 24));
+        routeLabel.setForeground(Color.BLACK);
+        summaryPanel.add(routeLabel);
+
+        JLabel dateLabel = new JLabel("Travel Date: " + travelDate);
+        dateLabel.setFont(new Font("Arial", Font.PLAIN, 24));
+        dateLabel.setForeground(Color.BLACK);
+        summaryPanel.add(dateLabel);
+
+        JLabel timeLabel = new JLabel("Travel Time: " + travelTime);
+        timeLabel.setFont(new Font("Arial", Font.PLAIN, 24));
+        timeLabel.setForeground(Color.BLACK);
+        summaryPanel.add(timeLabel);
+
+        JLabel contactLabel = new JLabel("Contact: " + contact);
+        contactLabel.setFont(new Font("Arial", Font.PLAIN, 24));
+        contactLabel.setForeground(Color.BLACK);
+        summaryPanel.add(contactLabel);
+
+        JLabel passengerCountLabel = new JLabel("Number of Passengers: " + passengerNames.size());
+        passengerCountLabel.setFont(new Font("Arial", Font.PLAIN, 24));
+        passengerCountLabel.setForeground(Color.BLACK);
+        summaryPanel.add(passengerCountLabel);
+
+        JLabel passengerNamesLabel = new JLabel("Passenger Names: " + String.join(", ", passengerNames));
+        passengerNamesLabel.setFont(new Font("Arial", Font.PLAIN, 24));
+        passengerNamesLabel.setForeground(Color.BLACK);
+        summaryPanel.add(passengerNamesLabel);
+
+        JLabel seatsLabel = new JLabel("Booked Seats: " + String.join(", ", selectedSeats));
+        seatsLabel.setFont(new Font("Arial", Font.PLAIN, 24));
+        seatsLabel.setForeground(Color.BLACK);
+        summaryPanel.add(seatsLabel);
+
+        JLabel mealsLabel = new JLabel("Meals Selected: " + String.join(", ", meals));
+        mealsLabel.setFont(new Font("Arial", Font.PLAIN, 24));
+        mealsLabel.setForeground(Color.BLACK);
+        summaryPanel.add(mealsLabel);
+
+        double totalWithMeals = totalPrice + totalMealPrice;
+        JLabel totalPriceLabel = new JLabel("Total Price (without meals): Rs" + totalPrice);
+        totalPriceLabel.setFont(new Font("Arial", Font.PLAIN, 24));
+        totalPriceLabel.setForeground(Color.BLACK);
+        summaryPanel.add(totalPriceLabel);
+
+        JLabel totalWithMealsLabel = new JLabel("Total Price (with meals): Rs" + totalWithMeals);
+        totalWithMealsLabel.setFont(new Font("Arial", Font.PLAIN, 24));
+        totalWithMealsLabel.setForeground(Color.BLACK);
+        summaryPanel.add(totalWithMealsLabel);
+
+        // Finish button
+        JButton finishButton = new JButton("Exit");
+        finishButton.setFont(new Font("Arial", Font.BOLD, 24)); // Bigger font for button
+        finishButton.addActionListener(e -> {
+            JOptionPane.showMessageDialog(summaryPanel, "Thank you for your booking!");
+        });
+        summaryPanel.add(finishButton);
+
+        // Add summary panel over background
+        backgroundLabel.add(summaryPanel);
+        summaryPanel.setAlignmentX(Component.CENTER_ALIGNMENT);
+    }
+
+    public JPanel getPanel() {
+        return summaryPanel;
+    }
+}
+
+MainApp 
+
+import javax.imageio.ImageIO;
+import javax.swing.*;
+import java.awt.*;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.io.File;
+import java.io.IOException;
+
+public class MainApp {
+    public static void main(String[] args) {
+        SwingUtilities.invokeLater(() -> {
+            JFrame frame = new JFrame("Bus Reservation System");
+            frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+            frame.setSize(800, 600);
+
+            CardLayout cardLayout = new CardLayout();
+            JPanel cardPanel = new JPanel(cardLayout);
+
+            // Main Welcome Page with background image
+            JPanel mainPage = createMainPage(cardLayout, cardPanel);
+            cardPanel.add(mainPage, "MainPage");
+
+            // Registration/Login Page
+            RegistrationLoginApp registrationLoginApp = new RegistrationLoginApp(cardLayout, cardPanel);
+            cardPanel.add(registrationLoginApp.getPanel(), "RegistrationLoginApp");
+
+            // Travel Booking Page
+            TravelBooking travelBooking = new TravelBooking(cardLayout, cardPanel);
+            cardPanel.add(travelBooking.getPanel(), "TravelBooking");
+
+            // Ticket View Page
+          //TicketView ticketView = new TicketView();
+           //ardPanel.add(ticketView.getPanel(), "TicketView");
+
+            frame.getContentPane().add(cardPanel);
+            frame.setVisible(true);
+        });
+    }
+
+    private static JPanel createMainPage(CardLayout cardLayout, JPanel cardPanel) {
+        // Custom JPanel to display background image
+        JPanel panel = new JPanel(new GridBagLayout()) {
+            private Image backgroundImage;
+
+            {
+                try {
+                    // Load the image from the file path
+                    backgroundImage = ImageIO.read(new File("C:\\Users\\vmohu\\Bus reseveration system\\res\\mainbusess\\mainbuses .jpg"));
+                } catch (IOException e) {
+                    System.err.println("Image not found or cannot be read. Please check the file path.");
+                    e.printStackTrace();
+                }
+            }
+
+            @Override
+            protected void paintComponent(Graphics g) {
+                super.paintComponent(g);
+                if (backgroundImage != null) {
+                    // Scale the image to fit the panel size
+                    g.drawImage(backgroundImage, 0, 0, getWidth(), getHeight(), this);
+                }
+            }
+        };
+
+        // Set up layout constraints for centering the components
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.insets = new Insets(10, 10, 10, 10);
+        gbc.gridx = 0;
+        gbc.gridy = 0;
+        gbc.anchor = GridBagConstraints.CENTER;
+
+        // Welcome label
+        JLabel welcomeLabel = new JLabel("Welcome to the Royal Bus Travels", SwingConstants.CENTER);
+        welcomeLabel.setFont(new Font("Arial", Font.BOLD, 40));
+        welcomeLabel.setForeground(Color.white);
+        panel.add(welcomeLabel, gbc);
+
+        // Panel for buttons
+        JPanel buttonPanel = new JPanel(new FlowLayout());
+        buttonPanel.setOpaque(false); // Make button panel transparent
+        JButton bookTicketButton = new JButton("Book Ticket");
+      //JButton viewTicketButton = new JButton("View Ticket");
+
+        buttonPanel.add(bookTicketButton);
+      //buttonPanel.add(viewTicketButton);
+
+        // Position the button panel below the welcome label
+        gbc.gridy = 1;
+        panel.add(buttonPanel, gbc);
+
+        // Button actions
+        bookTicketButton.addActionListener(e -> cardLayout.show(cardPanel, "RegistrationLoginApp"));
+      //viewTicketButton.addActionListener(e -> cardLayout.show(cardPanel, "TicketView"));
+
+        return panel;
+    }
+}
+
+DBConnection
+import java.sql.Connection;
+
+import java.sql.DriverManager;
+
+import java.sql.SQLException;
+
+public class DBConnection {
+
+    private static final String DATABASE_URL = "jdbc:mysql://localhost:3306/busbookingsystem";
+    private static final String USERNAME = "root";
+
+    private static final String PASSWORD = "teddybear@2006"; // replace with your MySQL password
+
+    public static Connection getConnection() throws SQLException {
+
+        return DriverManager.getConnection(DATABASE_URL, USERNAME, PASSWORD);
+
+    }
+
+}
+
+
+
+USER TABLE 
+CREATE TABLE users (
+
+    id INT AUTO_INCREMENT PRIMARY KEY,
+
+    username VARCHAR(50) NOT NULL UNIQUE,
+
+    password VARCHAR(255) NOT NULL,
+
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+
+);
+bookings TABLE 
+
+CREATE TABLE bookings (
+
+    id INT AUTO_INCREMENT PRIMARY KEY,
+
+    route VARCHAR(255) NOT NULL,
+
+    travel_date DATE NOT NULL,
+
+    time VARCHAR(10) NOT NULL,
+
+    contact VARCHAR(100) NOT NULL,
+
+    passenger_count INT NOT NULL,
+
+    passenger_names TEXT NOT NULL,
+
+    total_price DECIMAL(10, 2) NOT NULL,
+
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+
+);
+
+
+ booked_seats TABLE 
+CREATE TABLE IF NOT EXISTS bookseats (
+    ->     booking_id INT AUTO_INCREMENT PRIMARY KEY,
+    ->     customer_name VARCHAR(50) NOT NULL,
+    ->     booked_seats TEXT NOT NULL,  -- You may need to remove UNIQUE constraint on this column
+    ->     travel_date DATE NOT NULL,
+    ->     time VARCHAR(10) NOT NULL,
+    ->     route VARCHAR(50) NOT NULL,
+    ->     total_price DOUBLE NOT NULL,
+    ->     UNIQUE (travel_date, time, route)  -- Ensure uniqueness based on travel date, time, and route
+    -> );
+
+meals TABLE 
+
+CREATE TABLE meals (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    meal_name VARCHAR(100) NOT NULL,
+    image_path VARCHAR(255) NOT NULL
+);
+
+INSERT INTO meals (meal_name, image_path) VALUES ('Sambar rice (Rs. 100)', '/sambar/sambar.jpg');
+INSERT INTO meals (meal_name, image_path) VALUES ('Curd rice (Rs. 70)', '/curdrice/curdrice.jpg');
+INSERT INTO meals (meal_name, image_path) VALUES ('Pongal (Rs. 100)', '/pongal/pongal.jpg');
+INSERT INTO meals (meal_name, image_path) VALUES ('Idli (Rs. 80)', '/idly/idly.jpg');
+INSERT INTO meals (meal_name, image_path) VALUES ('Dosa (Rs. 60)', '/dosa/dosa.jpg');
+
+
+
+
